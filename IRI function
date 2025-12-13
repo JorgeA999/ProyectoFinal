@@ -1,0 +1,181 @@
+Option Explicit
+
+Function IriTramo(Cotas() As Double, LongitudTramo As Double, dx As Double) As Double
+Dim z(4) As Double, z1(4) As Double, s(4, 4) As Double, p(4) As Double
+Dim a(4, 4) As Double, a1(4, 4) As Double, a2(4, 4) As Double, ic(4) As Double, jc(4) As Double, w(4) As Double
+
+Dim bl As Double, nn As Long, rs As Double, yp As Double
+Dim i As Long, j As Long, k As Long, ii As Long, jj As Long, kk As Long, ix As Long, it As Long
+Dim n As Long, k1 As Double, k2 As Double, mu As Double, c As Double, mm As Double
+Dim v As Double, t As Double, si As Boolean, er As Double, kd As Double, pv As Double, aa As Double
+
+
+'Calculo de constantes
+k = Int(0.25 / dx + 0.5) + 1
+bl = (k - 1) * dx
+ GoSub CalculaConstantes
+'Inicializar variables
+nn = 11 / dx + 1
+z1(1) = (Cotas(nn) - Cotas(1)) / 11
+z1(2) = 0
+z1(3) = z1(1)
+z1(4) = 0
+rs = 0
+ix = 1
+i = 0
+'Calculo de la pendiente
+Do
+i = i + 1
+If i > UBound(Cotas) Then Exit Do
+Do
+ix = ix + 1
+Cotas(k) = Cotas(i)
+If ix < k Then Cotas(ix) = Cotas(k)
+Loop While ix < k
+yp = (Cotas(k) - Cotas(1)) / bl
+For j = 2 To k
+Cotas(j - 1) = Cotas(j)
+Next j
+   
+   'Simulacion de la respuesta del modelo Cuarto de Carro
+   For j = 1 To 4
+
+      z(j) = p(j) * yp
+      For jj = 1 To 4
+      z(j) = z(j) + s(j, jj) * z1(jj)
+      Next jj
+      Next j
+      For j = 1 To 4
+      z1(j) = z(j)
+      Next j
+      rs = rs + Abs(z(3) - z(1))
+      Loop While ix < Int(LongitudTramo / dx + 0.5) Or ix = Int(LongitudTramo / dx + 0.5)
+IriTramo = rs / i
+
+Exit Function
+
+
+CalculaConstantes:
+'Calculo de  las Constantes:
+n = 4
+k1 = 653
+k2 = 63.3
+mu = 0.15
+c = 6
+mm = dx * 1000
+v = 80
+t = mm / v * 0.0036
+ For j = 1 To 4
+ For i = 1 To 4
+ a(j, i) = 0
+ a1(j, i) = 0
+ s(i, j) = 0
+ Next
+ a1(i, i) = 1
+ s(i, i) = 1
+ Next
+ a(1, 2) = 1
+ a(3, 4) = 1
+ a(2, 1) = -k2
+ a(2, 2) = -c
+ a(2, 3) = k2
+ a(2, 4) = c
+ a(4, 1) = k2 / mu
+ a(4, 2) = c / mu
+ a(4, 3) = -(k1 + k2) / mu
+ a(4, 4) = -c / mu
+it = 0
+Do
+it = it + 1
+si = False
+For j = 1 To n
+  For i = 1 To n
+     a2(i, j) = 0
+        For kk = 1 To n
+           a2(i, j) = a2(i, j) + a1(i, kk) * a(kk, j)
+         Next kk
+        Next i
+      Next j
+      For j = 1 To n
+        For i = 1 To n
+          a1(i, j) = a2(i, j) * t / it
+          If s(i, j) <> s(i, j) + a1(i, j) Then
+             s(i, j) = s(i, j) + a1(i, j)
+             si = True
+           End If
+         Next i
+       Next j
+     Loop While si
+er = 0
+For kk = 1 To n
+kd = kk - 1
+pv = 0
+
+   For i = 1 To n
+     For j = 1 To n
+       If kk > 1 Then
+         For ii = 1 To kd
+           For jj = 1 To kd
+              If i = ic(ii) Or j = jc(jj) Then GoTo Siga
+             Next jj
+            Next ii
+          End If
+          
+          If Abs(a(i, j)) > Abs(pv) Then
+             pv = a(i, j)
+             ic(kk) = i
+             jc(kk) = j
+             End If
+Siga:
+         Next j
+       Next i
+     If Abs(pv) < er Then
+     'Print "PIVOT < "; er
+     Stop
+   End If
+   ii = ic(kk)
+   jj = jc(kk)
+   For j = 1 To n
+      a(ii, j) = a(ii, j) / pv
+   Next j
+   a(ii, jj) = 1 / pv
+   For i = 1 To n
+      aa = a(i, jj)
+        If i <> ii Then
+         a(i, jj) = -aa / pv
+         For j = 1 To n
+           If j <> jj Then a(i, j) = a(i, j) - aa * a(ii, j)
+         Next j
+       End If
+     Next i
+   Next kk
+   
+  For j = 1 To n
+    For i = 1 To n
+      w(jc(i)) = a(ic(i), j)
+    Next i
+    For i = 1 To n
+    a(i, j) = w(i)
+    Next i
+  Next j
+    For i = 1 To n
+       For j = 1 To n
+          w(ic(j)) = a(i, jc(j))
+    Next j
+    For j = 1 To n
+      a(i, j) = w(j)
+    Next j
+  Next i
+  For i = 1 To n
+p(i) = -a(i, 4)
+For j = 1 To n
+    p(i) = p(i) + a(i, j) * s(j, 4)
+    Next j
+    p(i) = p(i) * k1 / mu
+    Next i
+    Return
+    End Function
+
+
+
+
